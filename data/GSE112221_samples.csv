@@ -1,0 +1,16 @@
+sample_names,sra_id
+NL1_h3k27ac_chipseq,SRR6880492
+Cirr1_h3k27ac_chipseq,SRR6880493
+HCC1_h3k27ac_chipseq,SRR6880494
+Cirr3_h3k27ac_chipseq,SRR6880495
+HCC3_h3k27ac_chipseq,SRR6880496
+NL1_input_chipseq_1,SRR6880507
+Cirr1_input_chipseq_1,SRR6880509
+HCC1_input_chipseq_1,SRR6880511
+Cirr3_input_chipseq_1,SRR6880513
+HCC3_input_chipseq_1,SRR6880515
+NL1_input_chipseq_2,SRR6880508
+Cirr1_input_chipseq_2,SRR6880510
+HCC1_input_chipseq_2,SRR6880512
+Cirr3_input_chipseq_2,SRR6880514
+HCC3_input_chipseq_2,SRR6880516

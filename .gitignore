@@ -1,3 +1,4 @@
-data/
+data/ChIP-seq/
+data/reference_genome/
 virtual_machine/
 .Rhistory

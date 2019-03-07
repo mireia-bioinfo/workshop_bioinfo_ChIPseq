@@ -3,13 +3,14 @@ title: "Analyzing ChIP-seq data"
 author: "Mireia Ramos-Rodriguez"
 date: "March 14, 2019"
 output:
+  unilur::tutorial_pdf_solution: 
+    latex_engine: xelatex
+  unilur::tutorial_pdf: default
   unilur::tutorial_html_solution: 
     theme: cerulean
     toc: TRUE
     toc_float: TRUE
     number_sections: TRUE
-  unilur::tutorial_pdf: default
-  unilur::tutorial_pdf_solution: default
   unilur::tutorial_html: default
 ---
 
@@ -56,9 +57,9 @@ knitr::include_graphics("img/tf_histone_cres.png", dpi=250)
 
 You have to consider that when sequencing ChIP-seq, many of the parameters you can choose depend on the specifics of your experiment, your question and your budget! However, to provide you with some general guidelines, this are some general recommendations:
 
-- _Paired or single-end_. Usually single-end reads is sufficient for ChIP-seq analysis.
-- _Sequencing depth_. Between 30M (for narrow peaks) and 60M (for broad marks) sequenced reads should yield good profiles.
-- _Read length_. 50bp reads are usually sufficient. Could be interesting to make them longer when dealing with broader regions, but not that necessary when regions are narrow.
+- __Paired or single-end__. Usually single-end reads is sufficient for ChIP-seq analysis.
+- __Sequencing depth__. Between 30M (for narrow peaks) and 60M (for broad marks) sequenced reads should yield good profiles.
+- __Read length__. 50bp reads are usually sufficient. Could be interesting to make them longer when dealing with broader regions, but not that necessary when regions are narrow.
 
 # ChIP-seq Workflow
 
@@ -163,7 +164,7 @@ The output of the aligner is a `SAM/BAM` file containing the read sequence and t
 Many papers have tried to compare the performance of the different aligners available. However, my advice to you is to look in the literature for papers analyzing data similar to yours and just copy their methods!
 ```
 
-## SAM/BAM files
+## `SAM`/`BAM` files
 __SAM__ (Sequence Alignment/Map) and __BAM__ (same as SAM but binary, compressed and indexed) are file types used for storing sequence and alignment information.
 
 
@@ -268,15 +269,26 @@ Once your alignment is done, you usually will have to perform some routine steps
 Usually, for running operations on `BAM` or `SAM` files, the preferred program is [Samtools](http://www.htslib.org/).
 
 ## Converting `SAM` to `BAM`
-This first step can be easily done using `samtools view`
+This first step can be easily done using `samtools view`, with the following arguments:
+
+- `-@ 4`: Indicates the number (4) of __additional__ threads to use (default is 0).
+- `-b`: Tells samtools to convert to `BAM`. 
+- `-o`: Output filename for the `BAM` file.
 
 ```{bash, eval=FALSE}
-samtools view data/ChIP-seq/BAM/file.sam -@ 4 -b - o data/ChIP-seq/BAM/file.raw.bam
+samtools view data/ChIP-seq/BAM/file.sam -@ 4 -b -o data/ChIP-seq/BAM/file.raw.bam
 ```
 
 
 ## Sorting your `BAM` file by coordinate
 
+- `-o`: Output filename for the sorted `BAM` file.
+- `-m 2G`: Tells Samtools to use up to 2G __per thread__.
+- `-@ 4`: Uses 4 __additional__threads.
+
+```{bash, eval=FALSE}
+samtools sort data/ChIP-seq/BAM/file.raw.bam -o data/ChIP-seq/BAM/file.srtd.bam -m 2G -@ 4
+```
 
 ## Removing duplicates
 
@@ -286,6 +298,20 @@ Removing duplicates:
 
 - `MarkDuplicates` from Picard.
 - `markdup` from Samtools.
+
+- `-r`: Remove duplicate reads.
+- `-@ 4`: Use 4 __additional__ threads.
+
+```{bash, eval=FALSE}
+samtools markdup data/ChIP-seq/BAM/file.srtd.bam data/ChIP-seq/BAM/file.rmdup.bam -r -@ 4
+```
+
+## Indexing your BAM file
+
+```{bash, eval=FALSE}
+samtools index file.rmdup.bam
+```
+
 
 # Peak calling
 
