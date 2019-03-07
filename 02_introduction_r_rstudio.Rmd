@@ -1,0 +1,113 @@
+---
+title: "Introduction to R and RStudio"
+author: "Mireia Ramos-Rodriguez"
+date: "March 14, 2019"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    number_sections: TRUE
+    theme: cerulean
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+__R__ is a programming language designed originally for performing statistical analyses. However, it's potential has been increased and nowadays it can be used for general data analysis, creating atractive plots or even for creating websites! You can download R from the official repository: [CRAN](https://www.r-project.org/). 
+
+You can use R from the unix commant line or download an Integrated Development Environment (IDE) such as __RStudio__. 
+
+# Programming
+
+> If you have used spreadsheets to calculate stuff, you have already programmed.
+
+In R, you can assign values to variables using `<-`. You don't have to type it everytime, just `Alt`+`-`!
+
+```{r}
+variable <- 2342
+variable
+```
+
+- __Functions__.
+- __If statements__.
+- __Loops__.
+
+# R basics
+## Data types
+The basic types of variables that can be represented in R are the following:
+
+- _Numeric_. `332`, `0.234`.
+- _Character_. `"Barcelona"`, `"woman"`. A special type of character is the class _factor_.
+- _Logical_. `TRUE` or `FALSE`.
+    
+You can check the type of variable using `class()`.
+
+```{r}
+var <- "text" # character
+class(var)
+
+var <- 3242 # numeric
+class(var)
+
+var <- TRUE # logical
+class(var)
+```
+
+
+## Arithmetic operators
+
+Operator    | Description
+------------|---------------
+`+`	        | addition
+`-`	        | subtraction
+`*`	        | multiplication
+`/`	        | division
+`^` or `**`	| exponentiation
+
+```{r}
+3+4*5.2/2^2
+```
+
+
+## Logical operators
+
+Operator | Description
+---------|-------------------
+`>`	     | greater than
+`>=`     | greater than or equal to
+`==`     |	exactly equal to
+`!=`     | not equal to
+
+```{r}
+# Works with numerics
+3 > 2
+
+# And also with characters
+"class"=="class"
+```
+
+
+## Data structures
+
+- __Vectors__.
+- __Matrices__.
+- __Lists__.
+- __Dataframes__.
+
+
+# Working with R in RStudio
+
+
+```{r, echo=FALSE, fig.cap="RStudio overview. Source: http://www.sthda.com/english/wiki/r-basics-quick-and-easy"}
+knitr::include_graphics("http://www.sthda.com/sthda/RDoc/images/rstudio.png")
+```
+
+
+## Loading data
+
+# Functions and packages
+
+# Additional resources

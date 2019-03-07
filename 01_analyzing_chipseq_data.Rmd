@@ -1,0 +1,304 @@
+---
+title: "Analyzing ChIP-seq data"
+author: "Mireia Ramos-Rodriguez"
+date: "March 14, 2019"
+output:
+  unilur::tutorial_html_solution: 
+    theme: cerulean
+    toc: TRUE
+    toc_float: TRUE
+    number_sections: TRUE
+  unilur::tutorial_pdf: default
+  unilur::tutorial_pdf_solution: default
+  unilur::tutorial_html: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_template$set(solution = list(box.title = "Look at the result",
+                                         box.body = list(fill = "#ACFFAF4C"),
+                                         box.collapse = TRUE,
+                                         box.icon = "fa-lightbulb"),
+                         alert = list(box.title = "Watch out!",
+                                      box.body = list(fill = "#fa5b42", colour = "#fdf6d4"),
+                                      box.collapse = TRUE,
+                                      box.icon = "fa-exclamation-triangle"),
+                         tip = list(box.title = "Pro-tip",
+                                      box.body = list(fill = "lightblue"),
+                                      box.collapse = TRUE,
+                                      box.icon = "fa-star"),
+                         exercise = list(box.title = "Exercise",
+                                      box.body = list(fill = "plum"),
+                                      box.collapse = TRUE,
+                                      box.icon = "fa-pencil"))
+```
+
+# Introduction to ChIP-seq
+## What is ChIP-seq?
+
+Chromatin immunoprecipitation experiments followed by sequencing (ChIP–seq) detect __protein–DNA binding__ events and chemical __modifications of histone__ proteins (_Figure 1_). 
+
+```{r protocol, echo=FALSE, fig.align="center", fig.cap="Comparison of ChIP-seq experimental protocols (adapted from Furey 2012, Nature Reviews)."}
+knitr::include_graphics("img/protocol_chipseq.png", dpi=250)
+```
+
+Profiles obtained from transcription factor (TF) ChIP-seq and histone ChIP-seq are different (_Figure 2_):
+
+- TF ChIP-seq detects enrichment at the __cis-regulatory element__ (CRE), where the TFs bind.
+- Histone ChIP-seq detects enrichment at the __sorrounding nucleosomes__, where histone residues are modified.
+
+```{r landscape, echo=FALSE, fig.align="center", fig.cap="The transcription factor and histone modification landscape for inactive and active cis-regulatory elements (CRE; promoters and enhancers) and the corresponding read profiles (from Pundhir et al. 2015, Frontiers in Genetics)."}
+knitr::include_graphics("img/tf_histone_cres.png", dpi=250)
+```
+
+## Sequencing parameters
+
+You have to consider that when sequencing ChIP-seq, many of the parameters you can choose depend on the specifics of your experiment, your question and your budget! However, to provide you with some general guidelines, this are some general recommendations:
+
+- _Paired or single-end_. Usually single-end reads is sufficient for ChIP-seq analysis.
+- _Sequencing depth_. Between 30M (for narrow peaks) and 60M (for broad marks) sequenced reads should yield good profiles.
+- _Read length_. 50bp reads are usually sufficient. Could be interesting to make them longer when dealing with broader regions, but not that necessary when regions are narrow.
+
+# ChIP-seq Workflow
+
+## The dataset
+The datasets we are going to use for this workshop are from [Hlady et al., 2019 _Hepatology_](https://www.ncbi.nlm.nih.gov/pubmed/30136421), in which they compare several assays in normal liver with cirrotic liver and hepatocellular carcinoma (HCC) samples from human donors.
+
+All raw data from their assays can be accessed via their GEO ID: __[GSE112221](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE112221)__. The __[Gene Expression Omnibus (GEO)](https://www.ncbi.nlm.nih.gov/geo/)__ is a public functional genomics data repository that accepts array- and sequence-based data. Each dataset is given a GEO ID that usually starts with `GSE`. Inside each dataset, you can find independent samples with identifiers prefixed `GSM`. 
+
+In GEO you can download already processed data, such as bed files. However, we here are interested in downloading the raw fastq files so we can do all the processing ourselves. Therefore, for each sample we are interested in, we need to find the SRA ID (`SRX`, you can find it in the sample page in GEO) and from there, gather the run ID (`SRR`) which will give us access to the raw data.
+
+```{block, opts.label="exercise"}
+Go to the dataset website at GEO ([here](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE112221)). Look around and, using what is explained above, find the __run ID__ for the normal liver sample of the H3K27ac ChIP-seq.
+```
+
+```{block, opts.label="solution"}
+1. Go to the section __Samples (55)__ and click on `+ More`.
+2. Find the sample named __NL1_h3k27ac_h3k27ac_chipseq__ and click on the GEO sample id ([GSM3061124](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3061124)).
+3. Find the section named __Relations__ and then click on the SRA ID ([SRX3832997](https://www.ncbi.nlm.nih.gov/sra?term=SRX3832997))
+4. On the bottom you will see a table named __Runs__ that includes all the runs for that sample. 
+5. The __run ID__ for the normal liver H3K27ac sample is __SRR6880492__
+```
+
+You can download the files directly from the SRA website by clicking on the run ID, but you can also do so from the terminal using the __[SRA toolkit](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/)__ tool `fastq-dump`. 
+
+With `fastq-dump` you will be able to download fastq files directly from SRA. Since these samples are paired-end, you need to include the argument `--split-3` to send each pair to a different file. `--gzip` will compress the fastq output to fastq.gz.
+
+```{bash, eval=FALSE}
+# Download fastq files from SRA database
+fastq-dump --split-3 --gzip -O your_folder/ SRR6880492 
+```
+
+Here you have a complete list of the samples we are going to use in this workshop and their SRA run IDs:
+
+Sample names                | SRA run ID             | Description
+----------------------------|------------------------|----------------------------
+NL1_h3k27ac_h3k27ac_chipseq | SRR6880492             | H3K27ac ChIP-seq in Normal Liver
+Cirr1_h3k27ac_chipseq       | SRR6880493             | H3K27ac ChIP-seq in Cirrotic Liver (Patient 1)
+HCC1_h3k27ac_chipseq        | SRR6880494             | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 1)
+Cirr3_h3k27ac_chipseq       | SRR6880495             | H3K27ac ChIP-seq in Cirrotic Liver (Patient 3)
+HCC3_h3k27ac_chipseq        | SRR6880496             | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 3)
+NL1_input_chipseq           | SRR6880507, SRR6880508 | Input ChIP-seq in Normal Liver
+Cirr1_input_chipseq         | SRR6880509, SRR6880510 | Input ChIP-seq in Cirrotic Liver (Patient 1)
+HCC1_input_chipseq          | SRR6880511, SRR6880512 | Input ChIP-seq in Hepatocellular Carcinoma (Patient 1)
+Cirr3_input_chipseq         | SRR6880513, SRR6880514 | Input ChIP-seq in Cirrotic Liver (Patient 3)
+HCC3_input_chipseq          | SRR6880515, SRR6880516 | Input ChIP-seq in Hepatocellular Carcinoma (Patient 3)
+
+## General workflow
+A general workflow for ChIP-seq analysis consists on the following steps:
+
+1. __Qualiy control__. Check if reads have good overall quality. Trim adapters and reads if approppriate.
+2. __Alignment__. Align reads to a reference genome to obtain their genomic coordiantes.
+3. __Post-processing__. Remove duplicates and unwanted chromosomes.
+4. __Peak calling__. Find regions of enrichment (TF binding sites or nucleosomes with the histone mark of interest).
+5. __Visualization__. Visualize profile in a genome browser.
+
+## Some technical details
+
+# Quality control
+Before starting any processing steps, one should check the overall quality of the reads obtained from the sequencing facility. To do so, we are going to use __[FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)__, a quality control tool for high-troughput sequencing data.
+
+```{bash, eval=FALSE}
+fastqc folder_with_fastq/sample_reads.fastq
+```
+
+After checking that the overall quality is good, one can trim reads and/or filter out reads with low overall quality using different tools^[We will not cover this in this workshop but if you are interested in this, you should check [AfterQC](https://github.com/OpenGene/AfterQC)]. 
+
+```{block, opts.label="exercise"}
+Now run `fastqc` for the control liver sample.
+```
+
+```{bash, solution = TRUE, eval=FALSE}
+fastqc fastq/NL1_H3K27ac.fastq
+```
+
+# Alignment
+We call __alignment__ (or mapping) to the process of comparing reads to a reference genome, scoring the similarity and then assigning most likely genomic coordinates to each read.
+
+<!-- Insert alignment scheme here -->
+
+## Reference genomes
+A __reference genome__ is a database of DNA sequences, assembled as a representative of a species genome. Usually, one can find two versions of the reference genome: _NCBI_ (starts with `GRC`) and _UCSC_ (`hg` for human, `mm` for mice). The difference between the two basically lies in the naming of the chromosomes: NCBI uses numbers (i.e. 1, 2, X) and UCSC numbers plus `chr` (i.e. chr1, chr2, chrX).
+
+Nowadays, the most used versions of the human genome are the following:
+
+- __hg19__/__GRCh37__. Even though this is not the latest version, is the most broadly used. If you do not specifically need high accuracy when mapping your reads, you should use this, as many tools (such as [GREAT](http://great.stanford.edu/public/html/)) will only work with this version.
+- __hg38__/__GRch38__. This is the newest version. Even though it was relased in 2013, many labs still use the previous version.
+
+There are tools to convert coordinates from one build to another, such as [liftOver](https://genome.ucsc.edu/cgi-bin/hgLiftOver) from UCSC. 
+
+## Aligners
+__Aligners__ are tools specifically designed to map reads to a reference genome using different algorithms. Many aligners are available, but the most used for aligning ChIP-seq data are:
+
+- __[Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml)__. This is the one we will use in this workshop.
+- __[BWA](http://bio-bwa.sourceforge.net/)__.
+
+Both tools allow alignment of single and paired end reads, you just have to specify it when running them. 
+Generating an index is a techinque that many aligners use to speed up their running type. You may think about it as a book index: when having an idex it is then easier and faster to find specific parts of the book (i.e. the reference genome). [Paper describing indexing methods](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2836519/)
+
+The output of the aligner is a `SAM/BAM` file containing the read sequence and the assigned coordinates respect to the reference genome. The aligner will report the number of aligned reads (which should be >80% of the sequenced reads) and which of those where uniquely mapped or multi-mapping (they match more than one region in the genome). Aligners such as bowtie2 report the best alginment for multi-mapping reads. 
+
+```{block, opts.label = "tip"}
+Many papers have tried to compare the performance of the different aligners available. However, my advice to you is to look in the literature for papers analyzing data similar to yours and just copy their methods!
+```
+
+## SAM/BAM files
+__SAM__ (Sequence Alignment/Map) and __BAM__ (same as SAM but binary, compressed and indexed) are file types used for storing sequence and alignment information.
+
+
+```{block, opts.label="exercise"}
+Can you tell which one of the folloing files is in SAM and which one in BAM format?
+
+_File 1_: 
+
+>�BC�W[�Y�gbb&J\A��"����έ��q�鮙4۷t�  
+>                                          ��P�m&=�m�z����   >+���ºB$���|}�U�}[��U�._4�����T����������������/�WN?p�Bem��l�n��g��`4�.�'�����z������  
+>�t��� !�I�$��'1�M#0��@  
+>3�>�"�0��/æ�R��P�T�D ��L&���#�1BM������P2��p��`I$�I}�M�D^t�P�h2f�cFɠ�ό�  
+
+_File 2_:
+
+>@HD VN:1.6 SO:coordinate  
+>@SQ SN:ref LN:45   
+>r001 99 ref 7 30 8M2I4M1D3M = 37 39 TTAGATAAAGGATACTG *  
+>r002 0 ref 9 30 3S6M1P1I4M * 0 0 AAAAGATAAGGATA *  
+>r003 0 ref 9 30 5S6M * 0 0 GCCTAAGCTAA * SA:Z:ref,29,-,6H5M,17,0;  
+```
+
+```{block, opts.label="solution"}
+- File 1 is a BAM file. As BAM files are binary and compressed, they are not readable.
+- File 2 is a SAM file. SAM files are easily readable but their size is much bigger than BAM files!
+```
+
+BAM/SAM files consist on two different parts:
+
+- __Header__: starts with `@XX` and contains information on the file itself: how it is ordered, which is the reference genome used, which program you used to align the reads, etc.
+- __Body__: contains information on the sequences, their genomic coordinates, mapping qualities, etc.
+
+You can find more information on all the fields present in the SAM/BAM files from the [Samtools documentation](https://samtools.github.io/hts-specs/SAMv1.pdf).
+
+```{block, opts.label="exercise"}
+Can you tell which lines are the header and which lines are the body of this SAM file?
+
+>@HD VN:1.6 SO:coordinate  
+>@SQ SN:ref LN:45  
+>r001 99 ref 7 30 8M2I4M1D3M = 37 39 TTAGATAAAGGATACTG *  
+>r002 0 ref 9 30 3S6M1P1I4M * 0 0 AAAAGATAAGGATA *  
+>r003 0 ref 9 30 5S6M * 0 0 GCCTAAGCTAA * SA:Z:ref,29,-,6H5M,17,0;  
+>r004 0 ref 16 30 6M14N5M * 0 0 ATAGCTTCAGC *  
+>r003 2064 ref 29 17 6H5M * 0 0 TAGGC * SA:Z:ref,9,+,5S6M,30,1;  
+>r001 147 ref 37 30 9M = 7 -39 CAGCGGCAT * NM:i:1  
+```
+
+
+```{block, opts.label="solution"}
+- The first two lines starting with `@HD` and `@SQ` are the header. 
+    - The first line (`HD`) is telling you the format version (`VN:1.6`) and that the file is sorted by coordinates (`SO:coordinate`).
+    - The second line (`SQ`) contains information on the reference genome used for the alignment: the name of the reference genome (`SN:ref`) and it length (`LN:45`).
+- The following lines contain infomation the each one of the reads aligned to the reference genome:
+    1. Read name.
+    2. Flag. Bitwise information on the read status (mapped, unmapped, paired, unpaired, etc.).
+    3. Reference sequence name.
+    4. Position in the sequence
+    5. Mapping quality (MAPQ)
+    6. [...]
+    
+[...] You can find more information on all the fields present in the SAM/BAM files from the [Samtools documentation](https://samtools.github.io/hts-specs/SAMv1.pdf).
+```
+
+## Hands on! Let's align this thing!
+### Step 1: Download and index the reference genome.
+Before running an alignment, you will have to download the reference genome you want to use and __index__ it. 
+
+For downloading hg19 you can go to [UCSC downloads](http://hgdownload.cse.ucsc.edu/downloads.html) > Human > hg19 > Full data set > `hg19.2bit`. `2bit` is a compression that UCSC uses for making fasta files smaller. You can convert a `2bit` file into a `fasta` file by running `twoBitToFasta` from [UCSC tools]((http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/).
+
+```{bash, eval=FALSE}
+gunzip hg19.fa.gz # Uncompress the file
+bowtie2-build [options] <reference_genome> <bt2_index_baseName> # Create index with Bowtie2
+```
+
+### Step 2: Align your reads to the reference genome.
+We got our index and we got our reads, so let's run the alignment! You can specify different parameters for the alignment (check `bowtie2 -h` to see them all), we are going to use the following:
+
+- `-t`: Print the time it takes to perform each step.
+- `-x`: Index filename prefix (without the trailing `.X.bt2`).
+- `-U`: Single-end reads file (if it were paired end you need to specify the first pair file with `-1` and the second pair with `-2`). Fastq files can be gzipped (extension: `.gz`), so no need to unzip before aligning!
+- `-S`: Specify file for SAM output.
+
+```{bash, eval=FALSE}
+bowtie2 -t -x index -U single_end_reads.fastq -S output.sam
+```
+
+### Step 3: Explore the output of the alignment
+
+- Percentage of alignment.
+- File size.
+- File format.
+
+# Post-processing
+
+Once your alignment is done, you usually will have to perform some routine steps to process the the output:
+
+- The output is usually is a `SAM` file. You should convert it to `BAM`, which is a more light-weight way of storing the same data.
+- You should sort your `BAM` file by genomic coordinates.
+- You can also filter out some reads you do not want in your `BAM` file: duplicates, reads mapping to ENCODE black-listed regions, chromosomes you are not interested in, etc.
+- You should __index__ your `BAM` file. As with reference genomes, you can create a index for your `BAM` file so operations requiring accessing parts of it will run much faster.
+
+Usually, for running operations on `BAM` or `SAM` files, the preferred program is [Samtools](http://www.htslib.org/).
+
+## Converting `SAM` to `BAM`
+This first step can be easily done using `samtools view`
+
+```{bash, eval=FALSE}
+samtools view data/ChIP-seq/BAM/file.sam -@ 4 -b - o data/ChIP-seq/BAM/file.raw.bam
+```
+
+
+## Sorting your `BAM` file by coordinate
+
+
+## Removing duplicates
+
+Could be an issue for small reads, single-end TF ChIP-seq... Histone marks are broader, so the probability of having a biologically duplicated fragment is smaller.
+
+Removing duplicates:
+
+- `MarkDuplicates` from Picard.
+- `markdup` from Samtools.
+
+# Peak calling
+
+
+# Visualization
+
+# Additional resources
+
+- [NGS ChIP-seq course, EMBL-EBI](https://www.ebi.ac.uk/training/online/sites/ebi.ac.uk.training.online/files/user/18/private/chipseq_loos.pdf)
+- [Resources for ChIP-seq analysis](https://github.com/crazyhottommy/ChIP-seq-analysis)
+- [R/Bioconductor ChIP-seq workflow](http://biocluster.ucr.edu/~rkaundal/workshops/R_feb2016/ChIPseq/ChIPseq.html)
+- [Pipeline for ChIP-seq processing](https://github.com/shenlab-sinai/chip-seq_preprocess)
+- [ENCODE TF ChIP-seq pipeline](https://github.com/mforde84/ENCODE_TF_ChIP_pipeline)
+- [Hands-on introduction to ChIP-seq analysis - VIB Training](http://www.biologie.ens.fr/~mthomas/other/chip-seq-training/)
+- [Practical guidelines for the comprehensive analysis of ChIP-seq data](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003326)
+
