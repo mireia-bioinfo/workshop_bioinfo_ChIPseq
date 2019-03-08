@@ -3,14 +3,14 @@ title: "Analyzing ChIP-seq data"
 author: "Mireia Ramos-Rodriguez"
 date: "March 14, 2019"
 output:
-  unilur::tutorial_pdf_solution: 
-    latex_engine: xelatex
-  unilur::tutorial_pdf: default
   unilur::tutorial_html_solution: 
     theme: cerulean
     toc: TRUE
     toc_float: TRUE
     number_sections: TRUE
+  unilur::tutorial_pdf: default
+  unilur::tutorial_pdf_solution: 
+    latex_engine: xelatex
   unilur::tutorial_html: default
 ---
 
@@ -93,18 +93,18 @@ fastq-dump --split-3 --gzip -O your_folder/ SRR6880492
 
 Here you have a complete list of the samples we are going to use in this workshop and their SRA run IDs:
 
-Sample names                | SRA run ID             | Description
-----------------------------|------------------------|----------------------------
-NL1_h3k27ac_h3k27ac_chipseq | SRR6880492             | H3K27ac ChIP-seq in Normal Liver
-Cirr1_h3k27ac_chipseq       | SRR6880493             | H3K27ac ChIP-seq in Cirrotic Liver (Patient 1)
-HCC1_h3k27ac_chipseq        | SRR6880494             | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 1)
-Cirr3_h3k27ac_chipseq       | SRR6880495             | H3K27ac ChIP-seq in Cirrotic Liver (Patient 3)
-HCC3_h3k27ac_chipseq        | SRR6880496             | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 3)
-NL1_input_chipseq           | SRR6880507, SRR6880508 | Input ChIP-seq in Normal Liver
-Cirr1_input_chipseq         | SRR6880509, SRR6880510 | Input ChIP-seq in Cirrotic Liver (Patient 1)
-HCC1_input_chipseq          | SRR6880511, SRR6880512 | Input ChIP-seq in Hepatocellular Carcinoma (Patient 1)
-Cirr3_input_chipseq         | SRR6880513, SRR6880514 | Input ChIP-seq in Cirrotic Liver (Patient 3)
-HCC3_input_chipseq          | SRR6880515, SRR6880516 | Input ChIP-seq in Hepatocellular Carcinoma (Patient 3)
+Sample names    | SRA run ID             | Sequenced reads | Description
+----------------|------------------------|-----------------|---------------------------
+NL1_h3k27ac     | SRR6880492             | 19,808,136      | H3K27ac ChIP-seq in Normal Liver
+Cirr1_h3k27ac   | SRR6880493             | 26,149,171      | H3K27ac ChIP-seq in Cirrotic Liver (Patient 1)
+HCC1_h3k27ac    | SRR6880494             | 18,789,828      | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 1)
+Cirr3_h3k27ac   | SRR6880495             | 25,896,625      | H3K27ac ChIP-seq in Cirrotic Liver (Patient 3)
+HCC3_h3k27ac    | SRR6880496             | 21,954,923      | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 3)
+NL1_input       | SRR6880507, SRR6880508 | 35,050,237 + 15,223,421 | Input ChIP-seq in Normal Liver
+Cirr1_input     | SRR6880509, SRR6880510 | 24,301,177 + 15,506,759 | Input ChIP-seq in Cirrotic Liver (Patient 1)
+HCC1_input      | SRR6880511, SRR6880512 | 27,006,532 + 13,852,438 | Input ChIP-seq in Hepatocellular Carcinoma (Patient 1)
+Cirr3_input     | SRR6880513, SRR6880514 | 36,198,135 + 14,772,104 | Input ChIP-seq in Cirrotic Liver (Patient 3)
+HCC3_input      | SRR6880515, SRR6880516 | 14,131,132 + | Input ChIP-seq in Hepatocellular Carcinoma (Patient 3)
 
 ## General workflow
 A general workflow for ChIP-seq analysis consists on the following steps:
@@ -229,17 +229,17 @@ Can you tell which lines are the header and which lines are the body of this SAM
 ```
 
 ## Hands on! Let's align this thing!
-### Step 1: Download and index the reference genome.
+### Step 1: Download and index the reference genome. {.unnumbered}
 Before running an alignment, you will have to download the reference genome you want to use and __index__ it. 
 
-For downloading hg19 you can go to [UCSC downloads](http://hgdownload.cse.ucsc.edu/downloads.html) > Human > hg19 > Full data set > `hg19.2bit`. `2bit` is a compression that UCSC uses for making fasta files smaller. You can convert a `2bit` file into a `fasta` file by running `twoBitToFasta` from [UCSC tools]((http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/).
+For downloading hg19 you can go to [UCSC downloads](http://hgdownload.cse.ucsc.edu/downloads.html) > Human > hg19 > Full data set > `hg19.2bit`. `2bit` is a compression that UCSC uses for making fasta files smaller. You can convert a `2bit` file into a `fasta` file by running `twoBitToFasta` from [UCSC tools](http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/).
 
 ```{bash, eval=FALSE}
-gunzip hg19.fa.gz # Uncompress the file
-bowtie2-build [options] <reference_genome> <bt2_index_baseName> # Create index with Bowtie2
+twoBitToFastq hg19.2bit hg19.fa # Uncompress the file
+bowtie2-build hg19.fa hg19 --threads 5 # Create index with Bowtie2
 ```
 
-### Step 2: Align your reads to the reference genome.
+### Step 2: Align your reads to the reference genome. {.unnumbered}
 We got our index and we got our reads, so let's run the alignment! You can specify different parameters for the alignment (check `bowtie2 -h` to see them all), we are going to use the following:
 
 - `-t`: Print the time it takes to perform each step.
@@ -251,8 +251,8 @@ We got our index and we got our reads, so let's run the alignment! You can speci
 bowtie2 -t -x index -U single_end_reads.fastq -S output.sam
 ```
 
-### Step 3: Explore the output of the alignment
-
+### Step 3: Explore the output of the alignment {.unnumbered}
+ 
 - Percentage of alignment.
 - File size.
 - File format.
