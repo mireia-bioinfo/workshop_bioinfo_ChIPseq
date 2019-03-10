@@ -3,24 +3,40 @@ title: "Introduction to R and RStudio"
 author: "Mireia Ramos-Rodriguez"
 date: "March 14, 2019"
 output: 
-  html_document:
+  unilur::tutorial_html_solution: 
+    theme: cerulean
     toc: TRUE
     toc_float: TRUE
     number_sections: TRUE
-    theme: cerulean
-    code_folding: show
+  unilur::tutorial_pdf: default
+  unilur::tutorial_pdf_solution: 
+    latex_engine: xelatex
+  unilur::tutorial_html: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_template$set(solution = list(box.title = "Look at the result",
+                                         box.body = list(fill = "#ACFFAF4C"),
+                                         box.collapse = TRUE,
+                                         box.icon = "fa-lightbulb"),
+                         alert = list(box.title = "Watch out!",
+                                      box.body = list(fill = "#fa5b42", colour = "#fdf6d4"),
+                                      box.collapse = TRUE,
+                                      box.icon = "fa-exclamation-triangle"),
+                         tip = list(box.title = "Pro-tip",
+                                      box.body = list(fill = "lightblue"),
+                                      box.collapse = TRUE,
+                                      box.icon = "fa-star"),
+                         exercise = list(box.title = "Exercise",
+                                      box.body = list(fill = "plum"),
+                                      box.collapse = TRUE,
+                                      box.icon = "fa-pencil"))
 ```
 
 # Introduction
 __R__ is a programming language designed originally for performing statistical analyses. However, it's potential has been increased and nowadays it can be used for general data analysis, creating atractive plots or even for creating websites! You can download R from the official repository: [CRAN](https://www.r-project.org/). 
-
-You can use R from the unix commant line or download an Integrated Development Environment (IDE) such as __RStudio__. 
-
-# Programming
 
 > If you have used spreadsheets to calculate stuff, you have already programmed.
 
@@ -31,9 +47,18 @@ variable <- 2342
 variable
 ```
 
-- __Functions__.
-- __If statements__.
-- __Loops__.
+You can use R from the unix command line or download an Integrated Development Environment (IDE) such as __RStudio__. 
+
+# Working with R in RStudio
+
+```{r, echo=FALSE, fig.cap="RStudio overview. Source: http://www.sthda.com/english/wiki/r-basics-quick-and-easy", fig.align="center"}
+knitr::include_graphics("http://www.sthda.com/sthda/RDoc/images/rstudio.png")
+```
+
+1. __Code editor__.
+2. __R Console__.
+3. __Environment and History__.
+4. __Plots, help, files__.
 
 # R basics
 ## Data types
@@ -45,7 +70,12 @@ The basic types of variables that can be represented in R are the following:
     
 You can check the type of variable using `class()`.
 
-```{r}
+```{block, opts.label="exercise"}
+Create one variable of each of the above-mentioned basic types and check that the type is correct using the `class()` function.
+```
+
+
+```{r, solution=TRUE}
 var <- "text" # character
 class(var)
 
@@ -92,21 +122,38 @@ Operator | Description
 
 ## Data structures
 
-- __Vectors__.
-- __Matrices__.
-- __Lists__.
-- __Dataframes__.
+We can combine several data types into more complex structures. The different structures one can create in R are the following:
 
+- __Vectors__. Consists on a concatenation `c()` of values. The type of all values should be the same.
+```{r}
+vector <- c(0,1,2,3,4,6)
+vector
+```
 
-# Working with R in RStudio
+- __Matrices__. Are basically vectors, but with 2 dimensions (rows and columns). You can create a matrix using `matrix()`. You can check which arguments you can pass to the matrix function typing `?matrix` or `help(matrix)`
+```{r}
+mat <- matrix(vector, nrow=2)
+mat
+```
 
+```{block, opts.label="exercise"}
+As an example we just generated a vector of numbers. Try to generate a __vector with letters (characters)__ from 'a' to 'f' and then convert it to a matrix with 2 columns.
+```
 
-```{r, echo=FALSE, fig.cap="RStudio overview. Source: http://www.sthda.com/english/wiki/r-basics-quick-and-easy"}
-knitr::include_graphics("http://www.sthda.com/sthda/RDoc/images/rstudio.png")
+```{r, solution=TRUE}
+vector <- c('a', 'b', 'c', 'd', 'e', 'f')
+mat <- matrix(vector, ncol=2)
+mat
 ```
 
 
-## Loading data
+
+- __Lists__.
+- __Dataframes__.
+
+## Functions
+
+# Loading data
 
 # Functions and packages
 

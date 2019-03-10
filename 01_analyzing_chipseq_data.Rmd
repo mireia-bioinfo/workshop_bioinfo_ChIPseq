@@ -53,6 +53,8 @@ Profiles obtained from transcription factor (TF) ChIP-seq and histone ChIP-seq a
 knitr::include_graphics("img/tf_histone_cres.png", dpi=250)
 ```
 
+When sequencing ChIP-seq samples, we usually need a control for the antibody inespecific binding, known as __input__. We can use as input bulk DNA or DNA immunoprecipitated with IgG.
+
 ## Sequencing parameters
 
 You have to consider that when sequencing ChIP-seq, many of the parameters you can choose depend on the specifics of your experiment, your question and your budget! However, to provide you with some general guidelines, this are some general recommendations:
@@ -93,18 +95,18 @@ fastq-dump --split-3 --gzip -O your_folder/ SRR6880492
 
 Here you have a complete list of the samples we are going to use in this workshop and their SRA run IDs:
 
-Sample names    | SRA run ID             | Sequenced reads | Description
-----------------|------------------------|-----------------|---------------------------
-NL1_h3k27ac     | SRR6880492             | 19,808,136      | H3K27ac ChIP-seq in Normal Liver
-Cirr1_h3k27ac   | SRR6880493             | 26,149,171      | H3K27ac ChIP-seq in Cirrotic Liver (Patient 1)
-HCC1_h3k27ac    | SRR6880494             | 18,789,828      | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 1)
-Cirr3_h3k27ac   | SRR6880495             | 25,896,625      | H3K27ac ChIP-seq in Cirrotic Liver (Patient 3)
-HCC3_h3k27ac    | SRR6880496             | 21,954,923      | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 3)
-NL1_input       | SRR6880507, SRR6880508 | 35,050,237 + 15,223,421 | Input ChIP-seq in Normal Liver
-Cirr1_input     | SRR6880509, SRR6880510 | 24,301,177 + 15,506,759 | Input ChIP-seq in Cirrotic Liver (Patient 1)
-HCC1_input      | SRR6880511, SRR6880512 | 27,006,532 + 13,852,438 | Input ChIP-seq in Hepatocellular Carcinoma (Patient 1)
-Cirr3_input     | SRR6880513, SRR6880514 | 36,198,135 + 14,772,104 | Input ChIP-seq in Cirrotic Liver (Patient 3)
-HCC3_input      | SRR6880515, SRR6880516 | 14,131,132 + | Input ChIP-seq in Hepatocellular Carcinoma (Patient 3)
+Sample names    | SRA run ID | Sequenced reads | Description
+----------------|------------|-----------------|---------------------------
+NL1_h3k27ac     | SRR6880492 | 19,808,136 | H3K27ac ChIP-seq in Normal Liver
+Cirr1_h3k27ac   | SRR6880493 | 26,149,171 | H3K27ac ChIP-seq in Cirrotic Liver (Patient 1)
+HCC1_h3k27ac    | SRR6880494 | 18,789,828 | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 1)
+Cirr3_h3k27ac   | SRR6880495 | 25,896,625 | H3K27ac ChIP-seq in Cirrotic Liver (Patient 3)
+HCC3_h3k27ac    | SRR6880496 | 21,954,923 | H3K27ac ChIP-seq in Hepatocellular Carcinoma (Patient 3)
+NL1_input       | SRR6880507 | 35,050,237 | Input ChIP-seq in Normal Liver
+Cirr1_input     | SRR6880509 | 24,301,177 | Input ChIP-seq in Cirrotic Liver (Patient 1)
+HCC1_input      | SRR6880511 | 27,006,532 | Input ChIP-seq in Hepatocellular Carcinoma (Patient 1)
+Cirr3_input     | SRR6880513 | 36,198,135 | Input ChIP-seq in Cirrotic Liver (Patient 3)
+HCC3_input      | SRR6880515 | 14,131,132 | Input ChIP-seq in Hepatocellular Carcinoma (Patient 3)
 
 ## General workflow
 A general workflow for ChIP-seq analysis consists on the following steps:
@@ -261,9 +263,9 @@ bowtie2 -t -x index -U single_end_reads.fastq -S output.sam
 
 Once your alignment is done, you usually will have to perform some routine steps to process the the output:
 
-- The output is usually is a `SAM` file. You should convert it to `BAM`, which is a more light-weight way of storing the same data.
-- You should sort your `BAM` file by genomic coordinates.
-- You can also filter out some reads you do not want in your `BAM` file: duplicates, reads mapping to ENCODE black-listed regions, chromosomes you are not interested in, etc.
+- The output is usually is a `SAM` file. You should __convert__ it to `BAM`, which is a more light-weight way of storing the same data.
+- You should __sort__ your `BAM` file by genomic coordinates.
+- You can also __filter out__ some reads you do not want in your `BAM` file: duplicates, reads mapping to ENCODE black-listed regions, chromosomes you are not interested in, etc.
 - You should __index__ your `BAM` file. As with reference genomes, you can create a index for your `BAM` file so operations requiring accessing parts of it will run much faster.
 
 Usually, for running operations on `BAM` or `SAM` files, the preferred program is [Samtools](http://www.htslib.org/).
@@ -279,8 +281,9 @@ This first step can be easily done using `samtools view`, with the following arg
 samtools view data/ChIP-seq/BAM/file.sam -@ 4 -b -o data/ChIP-seq/BAM/file.raw.bam
 ```
 
-
 ## Sorting your `BAM` file by coordinate
+
+Most programs need an input `BAM` file in which reads are sorted according to their genomic position. To order our `BAM` file we can use `samtools sort` with the following parameters:
 
 - `-o`: Output filename for the sorted `BAM` file.
 - `-m 2G`: Tells Samtools to use up to 2G __per thread__.
@@ -290,14 +293,15 @@ samtools view data/ChIP-seq/BAM/file.sam -@ 4 -b -o data/ChIP-seq/BAM/file.raw.b
 samtools sort data/ChIP-seq/BAM/file.raw.bam -o data/ChIP-seq/BAM/file.srtd.bam -m 2G -@ 4
 ```
 
+```{block, opts.labels="tip"}
+Do you remember __bash pipes__? You can use them with samtools too! You can pipe the output of samtools view (a `BAM` file) to samtools sort adding `-` , without having to create any intermediate files: 
+
+`samtools view data/ChIP-seq/BAM/file.sam -b | samtools sort - -o data/ChIP-seq/BAM/file.srtd.bam`
+```
+
 ## Removing duplicates
 
-Could be an issue for small reads, single-end TF ChIP-seq... Histone marks are broader, so the probability of having a biologically duplicated fragment is smaller.
-
-Removing duplicates:
-
-- `MarkDuplicates` from Picard.
-- `markdup` from Samtools.
+<!-- Could be an issue for small reads, single-end TF ChIP-seq... Histone marks are broader, so the probability of having a biologically duplicated fragment is smaller. -->
 
 - `-r`: Remove duplicate reads.
 - `-@ 4`: Use 4 __additional__ threads.

@@ -30,3 +30,9 @@ path <- "data/ChIP-seq/fastq/"
 
 file.rename(paste0(path, samples$sra_id, "_1.fastq.gz"),
             paste0(path, samples$sample_names, ".fastq.gz"))
+
+# Remove other files
+files <- list.files(path,
+                    pattern="SRR",
+                    full.names=TRUE)
+file.remove(files)
