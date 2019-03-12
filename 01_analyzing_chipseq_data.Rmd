@@ -41,7 +41,7 @@ knitr::opts_template$set(solution = list(box.title = "Look at the result",
 Chromatin immunoprecipitation experiments followed by sequencing (ChIP–seq) detect __protein–DNA binding__ events and chemical __modifications of histone__ proteins (_Figure 1_). 
 
 ```{r protocol, echo=FALSE, fig.align="center", fig.cap="Comparison of ChIP-seq experimental protocols (adapted from Furey 2012, Nature Reviews)."}
-knitr::include_graphics("img/protocol_chipseq.png", dpi=250)
+knitr::include_graphics("img/protocol_chipseq.png", dpi=400)
 ```
 
 Profiles obtained from transcription factor (TF) ChIP-seq and histone ChIP-seq are different (_Figure 2_):
@@ -50,7 +50,7 @@ Profiles obtained from transcription factor (TF) ChIP-seq and histone ChIP-seq a
 - Histone ChIP-seq detects enrichment at the __sorrounding nucleosomes__, where histone residues are modified.
 
 ```{r landscape, echo=FALSE, fig.align="center", fig.cap="The transcription factor and histone modification landscape for inactive and active cis-regulatory elements (CRE; promoters and enhancers) and the corresponding read profiles (from Pundhir et al. 2015, Frontiers in Genetics)."}
-knitr::include_graphics("img/tf_histone_cres.png", dpi=250)
+knitr::include_graphics("img/tf_histone_cres.png", dpi=400)
 ```
 
 When sequencing ChIP-seq samples, we usually need a control for the antibody inespecific binding, known as __input__. We can use as input bulk DNA or DNA immunoprecipitated with IgG.
@@ -116,6 +116,11 @@ A general workflow for ChIP-seq analysis consists on the following steps:
 3. __Post-processing__. Remove duplicates and unwanted chromosomes.
 4. __Peak calling__. Find regions of enrichment (TF binding sites or nucleosomes with the histone mark of interest).
 5. __Visualization__. Visualize profile in a genome browser.
+
+```{r, echo=FALSE, fig.align="center"}
+knitr::include_graphics("img/chip_workflow/chip_workflow.001.png", dpi=400)
+```
+
 
 ## Some technical details
 
