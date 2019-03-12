@@ -175,7 +175,7 @@ Can you tell which one of the folloing files is in SAM and which one in BAM form
 
 _File 1_: 
 
->�BC�W[�Y�gbb&J\A��"����έ��q�鮙4۷t�  
+>�BC�W[�Y�gbb&J\A��"����έ��q�鮙4۷t�  
 >                                          ��P�m&=�m�z����   >+���ºB$���|}�U�}[��U�._4�����T����������������/�WN?p�Bem��l�n��g��`4�.�'�����z������  
 >�t��� !�I�$��'1�M#0��@  
 >3�>�"�0��/æ�R��P�T�D ��L&���#�1BM������P2��p��`I$�I}�M�D^t�P�h2f�cFɠ�ό�  
@@ -231,7 +231,12 @@ Can you tell which lines are the header and which lines are the body of this SAM
 ```
 
 ## Hands on! Let's align this thing!
-### Step 1: Download and index the reference genome. {.unnumbered}
+### Step 0: Download and index the reference genome. {.unnumbered}
+
+```{block, opts.label="alert"}
+Generating an index takes a long time (20 minutes for hg19 using 10 threads). For this reason, we will not be generating the index in this workshop. However, below you can find all the necessary steps to donwload and index your genome with Bowtie2.
+```
+
 Before running an alignment, you will have to download the reference genome you want to use and __index__ it. 
 
 For downloading hg19 you can go to [UCSC downloads](http://hgdownload.cse.ucsc.edu/downloads.html) > Human > hg19 > Full data set > `hg19.2bit`. `2bit` is a compression that UCSC uses for making fasta files smaller. You can convert a `2bit` file into a `fasta` file by running `twoBitToFasta` from [UCSC tools](http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/).
@@ -241,7 +246,8 @@ twoBitToFastq hg19.2bit hg19.fa # Uncompress the file
 bowtie2-build hg19.fa hg19 --threads 5 # Create index with Bowtie2
 ```
 
-### Step 2: Align your reads to the reference genome. {.unnumbered}
+
+### Step 1: Align your reads to the reference genome. {.unnumbered}
 We got our index and we got our reads, so let's run the alignment! You can specify different parameters for the alignment (check `bowtie2 -h` to see them all), we are going to use the following:
 
 - `-t`: Print the time it takes to perform each step.
@@ -253,7 +259,7 @@ We got our index and we got our reads, so let's run the alignment! You can speci
 bowtie2 -t -x index -U single_end_reads.fastq -S output.sam
 ```
 
-### Step 3: Explore the output of the alignment {.unnumbered}
+### Step 2: Explore the output of the alignment {.unnumbered}
  
 - Percentage of alignment.
 - File size.
@@ -278,7 +284,7 @@ This first step can be easily done using `samtools view`, with the following arg
 - `-o`: Output filename for the `BAM` file.
 
 ```{bash, eval=FALSE}
-samtools view data/ChIP-seq/BAM/file.sam -@ 4 -b -o data/ChIP-seq/BAM/file.raw.bam
+samtools view file.sam -@ 4 -b -o file.raw.bam
 ```
 
 ## Sorting your `BAM` file by coordinate
@@ -290,7 +296,7 @@ Most programs need an input `BAM` file in which reads are sorted according to th
 - `-@ 4`: Uses 4 __additional__threads.
 
 ```{bash, eval=FALSE}
-samtools sort data/ChIP-seq/BAM/file.raw.bam -o data/ChIP-seq/BAM/file.srtd.bam -m 2G -@ 4
+samtools sort file.raw.bam -o file.srtd.bam -m 2G -@ 4
 ```
 
 ```{block, opts.labels="tip"}
@@ -300,27 +306,78 @@ Do you remember __bash pipes__? You can use them with samtools too! You can pipe
 ```
 
 ## Removing duplicates
+This step is usually recommended to avoid PCR amplification bias and also to remove potential biases induced by PCR errors that could then be amplificated. This step can be performed by several tools, but for the sake of simplicity we are going to use `samtools markdup`, which will remove all reads marked as duplicates (when argument `-r` is used).
 
-<!-- Could be an issue for small reads, single-end TF ChIP-seq... Histone marks are broader, so the probability of having a biologically duplicated fragment is smaller. -->
+Briefly, `samtools markdup` checks wether multiple reads have the same coordinates and orientation. When a duplicate is detected, the overall highest quality template is kept and all others have the duplicate flag set (and removed if you use `-r`)^[More information on `samtools markdup` [here](http://www.htslib.org/algorithms/duplicate.html)].
+
+```{r, echo=FALSE, fig.align="center"}
+knitr::include_graphics("img/duplicate_example.png", dpi=400)
+```
+
+The arguments we will use when running `samtools markdup` are the following:
 
 - `-r`: Remove duplicate reads.
+- `-s`: Report statistics.
 - `-@ 4`: Use 4 __additional__ threads.
 
 ```{bash, eval=FALSE}
-samtools markdup data/ChIP-seq/BAM/file.srtd.bam data/ChIP-seq/BAM/file.rmdup.bam -r -@ 4
+samtools markdup data/ChIP-seq/BAM/file.srtd.bam data/ChIP-seq/BAM/file.rmdup.bam -r -@ 4 -s
 ```
 
 ## Indexing your BAM file
+As with reference genomes, `BAM` files need to be indexed so when querying sequences contained in it, we can do it in less amount of time. To do so, we just need to use `samtools index`. This will generate an additional file with the same name as your input `BAM` file, but adding the suffix `.bai`.
 
 ```{bash, eval=FALSE}
 samtools index file.rmdup.bam
 ```
 
-
 # Peak calling
 
+The last step of the processing of ChIP-seq data is the __peak calling__. In this step, we will run a program that using different algorithms will detect the regions in which there is an enrichment of ChIP-seq reads compared to the background, and will return a list with the genomic positions of this regions (i.e. __peaks__).
+
+One of the most famous and most used peak callers is [__MACS2__](https://github.com/taoliu/MACS). MACS captures the influence of genome complexity to evaluate the significance of enriched ChIP regions and  improves the spatial resolution through combining the information of both sequencing tag position and orientation. 
+
+In this step, we will need to use the H3K27ac sample and its input, so we can normalize and remove the inespecific events. Therefore, we will run MACS2 with the following arguments:
+
+- `-f`: Indicates the format of the input file, in this case `BAM`.
+- `-t`: Treatment file (in this case, H3K27ac).
+- `-c`: Control or input file.
+- `-g`: Effective genome size. `hs` indicates that we are using the human genome.
+- `-n`: Name for the output files (without any suffixes).
+- `--tempdir`: Directory for saving temporary files.
+- `--broad`: Call broad peaks. Since we are analyzing histone marks, it will try to join consecutive peaks corresponding to nucleosomes sorrounding a CRE.
+- `--nomodel`: Avoid estimation of fragment size.
+
+```{bash, eval=FALSE}
+activate-macs-git-2017.5.15 # Activate MACS2
+
+mkdir tmp/ # Create folder for temporary files
+
+macs2 callpeak -f BAM -t file.rmdup.bam -c file_input.rmdup.bam -g hs -n file --tempdir tmp/ --broad --nomodel
+```
 
 # Visualization
+
+An important step on the processing of ChIP-seq data, which can be done at any point is __visualizing your data__. You can visualize all files generated from the alignment forward using a __genome browser__. We will see some examples using [IGV](http://software.broadinstitute.org/software/igv/).
+
+This are some example file types one can visualize in a genome browser:
+
+- __`BAM` files__. It is mandatory for the index to be present in the same folder as the `BAM` file. When you load a `BAM` file into IGV, you will see that it loads two different tracks: a track with all _reads_ represented (missmatches between read and reference will be highlighted) and a _coverage_ track, which is the sum of all reads aligning to a specific region.
+- __Peak files (`BED`, `broadPeak`)__ will be represented as rectangles with their genomic coordinates.
+- __`bigWig` files__. This type of file is approppriate when your interested in plotting the coverage of your track from a lightweight file, without any information regarding read sequence or quality. `bigWig` files can be generated from `BAM` files converting them to `bedGraph` (same as `bigWig` but without compression) and then to `bigWig`.
+
+The steps to generate a `bigWig` file are as follows:
+
+1. Convert `BAM` to `bedGraph` using `genomeCoverageBed` from `bedtools`. 
+
+```{bash, eval=FALSE}
+genomeCoverageBed -bg -scale NUM -ibam file.rmdup.bam -g chr_sizes > file.bdg
+```
+
+2. Convert `bedGraph` to `bigWig`.
+```{bash, eval=FALSE}
+bedGraphToBigWig file.bdg chr_sizes file.bw -unc
+```
 
 # Additional resources
 

@@ -55,10 +55,10 @@ You can use R from the unix command line or download an Integrated Development E
 knitr::include_graphics("http://www.sthda.com/sthda/RDoc/images/rstudio.png")
 ```
 
-1. __Code editor__.
-2. __R Console__.
-3. __Environment and History__.
-4. __Plots, help, files__.
+1. __Code editor__. In your code editor you can create, open and save your `Rscripts`. Write your code and run it whenever you want using `Ctrl + Enter`.
+2. __R Console__. This is where your R code is ran. You can run it from the code editor or directly typing things in the console.
+3. __Environment and History__. Here you can find the objects and variables that are loaded in R and the history of commands you have ran.
+4. __Plots, help, files__. All plots you generate and R documentation will appear in this pane.
 
 # R basics
 ## Data types
@@ -147,14 +147,63 @@ mat
 ```
 
 
+- __Dataframes__. Dataframes are very much like spreadsheets: each column is information on one variable and each row is an instance (for example, a patient). When constructing a dataframe, you can use different vectors to represent different information. The only requierement is that all vectors have to be the same length.
 
-- __Lists__.
-- __Dataframes__.
+```{r}
+patients <- data.frame(patientID=1:4,
+                       gender=c("male", "female", "male", "female"),
+                       age=c(23, 45, 55, 22),
+                       dead=c(F, T, T, F))
+patients
+
+patients$age # to select one column
+```
+
+
+- __Lists__. Lists are concatenations of any data type or data structure. The first element of your list can be a vector, the second one a matrix and the third one a data frame. You can number elements in your list and access each data structure using `listName[[1]]`. 
+
+```{r}
+list <- list(name="donors",
+             patientList=patients)
+list
+
+list[[1]]
+list[["name"]]
+```
+
 
 ## Functions
 
-# Loading data
+There are many basic functions that are already loaded into R. For example, `data.frame()` is a function that generates data.frames and `help()` is a function that loads the manual for a specific R function. 
+
+You can create you own functions in R as follows:
+
+```{r}
+sq <- function(x) {
+  square <- x*x
+  return(square)
+}
+
+sq(2)
+```
+
+Functions are approppriate when you are copy&pasting operations many times, but changing tiny details. It might be more time consuming to create a function, but then you an run it with the parameters you want without any additional effort.
+
+Many times, there are functions out there for the things you want to do. This functions are wrapped in __packages__ and you can download them and use them freely!
 
 # Functions and packages
 
+CRAN
+Bioconductor
+
+
+# Loading data
+
+
+
 # Additional resources
+- [Datacamp: Introduction to R](https://www.datacamp.com/courses/free-introduction-to-r)
+- [Beginner's guide to R: Introduction](https://www.computerworld.com/article/2497143/business-intelligence/business-intelligence-beginner-s-guide-to-r-introduction.html)
+- [`swirl`, Learn R, in R](https://swirlstats.com/)
+- [R for Data Science](https://r4ds.had.co.nz/)
+- [R style guide](http://adv-r.had.co.nz/Style.html)
