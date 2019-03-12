@@ -15,7 +15,9 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
 
 knitr::opts_template$set(solution = list(box.title = "Look at the result",
                                          box.body = list(fill = "#ACFFAF4C"),
@@ -193,11 +195,196 @@ Many times, there are functions out there for the things you want to do. This fu
 
 # Functions and packages
 
-CRAN
-Bioconductor
+Packages are the fundamental units of reproducible R code. They include reusable R functions, the documentation that describes how to use them, and sample data. You can find R packages at official repositories like CRAN or in personal repositories like github. Packages found at official repositories are more consistent than those found at personal repositories, which could be still in development. 
+
+There are many packages that are already preinstalled in R. You can load those packages which will allow you to access their functions using `library(NameOfPackage)`. Once a package is loaded with `library`, all its function will be available to you untill you close your R session (i.e. close RStudio).
+
+```{block, opts.label="tip"}
+If you just want to use just one function from a specific package, you can use `NameOfPackage::name_of_function(arguments)` so you don't have to load all the package!
+```
 
 
-# Loading data
+The most important R _repositories_ from which you can donwload packages are:
+
+- __[CRAN](https://cran.r-project.org/)__. Is the official R repository and contains packages for many different purposes. To install packages from CRAN, you just need to type in your _R console_ `installPackages("NameOfPackage")`.
+
+- __[Bioconductor](https://www.bioconductor.org/)__. This repository contains packages dedicated to the analysis and comprehension of high-throughput genomic data. To install packages from Bioconductor, you will first need to install the CRAN package _BiocManager_, if it is not already installed (`install.packages("BiocManager")`). If it is installed, you can use the function `install` from that package with the name of the Bioconductor package you want to install: `BioManager::install("NameOfPackage")`.
+
+# Analyzing ChIP-seq data with R
+
+## GenomicRanges
+The ability to efficiently represent and manipulate genomic annotations and alignments is playing a central role when it comes to analyzing high-throughput sequencing data (a.k.a. NGS data). The [GenomicRanges](https://bioconductor.org/packages/release/bioc/html/GenomicRanges.html) package defines general purpose containers for storing and manipulating genomic intervals and variables defined along a genome.
+
+To generate a GenomicRanges object, we just need to provide the following parameters: 
+
+- `seqnames`. Name of the chromosome (for example `chr1`).
+- `ranges`. Range of the region you are trying to define (`start` and `end`). If your range only has one bp  (a SNP, for example) you can include only the `start` position.
+- `strand`. If you do not specify any strand (`+` or `-`), it will default to `*`.
+- `mcols`. You can include a `data.frame` with additional information that will be appended to your ranges.
+
+Below you can see how to create a `GRanges` object with only one range:
+
+```{r}
+library(GenomicRanges)
+
+gr <- GRanges(seqnames="chr1",
+              ranges=IRanges(start=3, end=60))
+gr
+```
+
+Or you can create and object with multiple ranges at once:
+```{r}
+gr <- GRanges(seqnames=c("chr1", "chr1", "chr3"),
+              ranges=IRanges(start=c(2,65,23),
+                             end=c(43, 192, 60)),
+              mcols=data.frame(id=c("region1", "region2", "region3")))
+gr
+```
+
+You can access the different elements in your `GRanges` object with different functions:
+
+```{r}
+seqnames(gr) # Returns all chr names
+start(gr) # Returns start position, same with end(gr)
+width(gr)
+mcols(gr) # Returns mcols data.frame
+gr$mcols.id # Returns a specific mcols data.frame
+length(granges) # Number of regions in your GRanges object
+```
+
+You can load and convert to `GRanges` the peak files generated from MACS2. The easiest way is using the function `toGRanges` from the package `regioneR`. You just need to provide the path to your peak file and it will load it and convert it to a `GRanges` object. Since we only need one specific function from the GRanges package, we are going to use `regioneR::toGRanges`.
+
+```{r}
+peaks <- regioneR::toGRanges("data/ChIP-seq/peaks/NL1_h3k27ac_peaks.broadPeak")
+peaks
+```
+
+
+## Differential ChIP-seq sites
+
+There are many packages for detecting differential sites for ChIP-seq data. One of the most popular is __[DESeq2](https://bioconductor.org/packages/release/bioc/html/DESeq2.html)__.
+
+For detecting differential sites with DESeq2 you need the following:
+
+1. A __count matrix__. A `matrix` in which each row will be a genomic region and each column a sample. The values will be the number of reads found in each region, for each sample.
+2. __Column data__ or sample data. A `data.frame` including phenotyping or grouping information for each of the samples found in the columns of the count matrix.
+3. A __design__. This design will be used by DESeq2 to compute the comparisons and detect differential sites.
+
+### Step 0: Install DESeq2 from Bioconductor {.unnumbered}
+
+DESeq2 is a Bioconductor package, so you can install it using:
+
+```{r, eval=FALSE}
+BiocManager::install("DESeq2")
+```
+
+### Step 1: Generate your count matrix {.unnumbered}
+
+The comparison we are going to do is normal tissue (__NL__) vs. hepatocellular carcinoma (__HCC__). Therefore, you will need to download the following files from `~/workshop_ChIPseq/ChIPseq/peaks/`: 
+
+- `NL1_h3k27ac_peaks.broadPeak`
+- `HCC1_h3k27ac_peaks.broadPeak`
+- `HCC3_h3k27ac_peaks.broadPeak`
+
+Next, we will load this peak files into R and then merge the overlapping genomic regions to have a single peak dataset with all the H3K27ac enriched regions.
+
+```{r, warning=FALSE, message=FALSE}
+# First, we load the peaks into R
+files <- paste0("data/ChIP-seq/peaks/",
+                c("NL1_h3k27ac_peaks.broadPeak", "HCC1_h3k27ac_peaks.broadPeak", "HCC3_h3k27ac_peaks.broadPeak"))
+
+peak.list <- lapply(files, read.delim, header=F) # read peaks in the 3 input files
+peaks <- do.call(rbind, peak.list) # convert 3 data.frames in 1 data.frame (row-bind)
+head(peaks)
+
+# Convert data.frame to GenomicRanges
+library(GenomicRanges)
+peaks.gr <- GRanges(seqnames=peaks$V1,
+                    ranges=IRanges(start=peaks$V2,
+                                   end=peaks$V3))
+peaks.gr
+
+# Keep only autosomal chr
+peaks.gr <- peaks.gr[seqnames(peaks.gr) %in% paste0("chr", 1:22),]
+
+# Merge overlapping ranges
+peaks.m <- reduce(peaks.gr)
+peaks.m
+
+# Convert GRanges to SAF (needed for Rsubread::featureCounts)
+saf <- data.frame(peaks.m)
+head(saf)
+
+saf <- saf[,-4]
+colnames(saf) <- c("Chr", "Start", "End", "Strand")
+saf$Strand <- "+"
+saf$GeneID <- paste0("region_", 1:nrow(saf))
+
+# Get read counts in each region from BAM files
+bam.files <- c("data/ChIP-seq/BAM/NL1_h3k27ac.rmdup.bam",
+               "data/ChIP-seq/BAM/HCC1_h3k27ac.rmdup.bam",
+               "data/ChIP-seq/BAM/HCC3_h3k27ac.rmdup.bam")
+
+reads <- Rsubread::featureCounts(bam.files,
+                                 annot.ext=saf,
+                                 nthreads=10)
+
+# the output of Rsubread::featureCounts() function is a list
+names(reads)
+counts <- reads$counts
+colnames(counts) <- c("NL1", "HCC1", "HCC3") # Set colnames for samples
+head(counts) # This is the matrix we need for DESeq2
+
+# Save file for using afterwards
+dir.create("data/differentialAnalysis/", F)
+save(counts, file="data/differentialAnalysis/countMatrix.rda")
+```
+
+### Step 2: Generate your column data
+
+In this step we will need to add information that we feel is important for the differential analysis. The important part is that the rownames of the dataframe generated in this step, need to coincide with the colnames of the count matrix generated in the step above.
+
+```{r}
+coldata <- data.frame(id=c("NL1", "HCC1", "HCC3"),
+                      tissue=c("NormalLiver", "HCCarcinoma", "HCCarcinoma"),
+                      patient=c(0, 1, 3))
+rownames(coldata) <- coldata$id
+
+# To use normal as reference we have to convert to factor and establish levels
+coldata$tissue <- factor(coldata$tissue, 
+                         levels=c("NormalLiver", "HCCarcinoma"))
+
+coldata
+```
+
+### Step 3: Run DESeq2 with the dataset
+
+```{r, warning=F, message=F}
+library(DESeq2)
+
+# Create DESeq dataset
+load("data/differentialAnalysis/countMatrix.rda") # Load count matrix
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = coldata,
+                              design = ~ tissue)
+
+# Now run DESeq2 differential analysis
+dds <- DESeq(dds)
+
+res <- results(dds)
+res
+
+# Filter significant regions: padj =< 0.05
+res <- as.data.frame(res)
+res.sign <- res[!is.na(res$padj) & res$padj <= 0.1,]
+
+knitr::kable(res.sign)
+```
+
+DESeq2 documentation is pretty extensive and with lots of examples, you can find it [here](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html).
+
+## Annotating peaks to the nearest gene
+
 
 
 
