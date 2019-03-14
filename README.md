@@ -12,7 +12,6 @@
     - Introduction to R and RStudio.
     - Dealing with `GenomicRanges`.
     - Differential analysis with DESeq2.
-    - Correlation with RNA expression.
 
 ## Software
 - [sratoolkit](https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/)
@@ -37,21 +36,11 @@ __Samples SRAs__:
 
 Sample names                | Experiment ID
 ----------------------------|------------------------
-NL1_h3k4me1_h3k4me1_chipseq | SRR6880487
-Cirr1_h3k4me1_chipseq       | SRR6880488
-HCC1_h3k4me1_chipseq        | SRR6880489
-Cirr3_h3k4me1_chipseq       | SRR6880490
-HCC3_h3k4me1_chipseq        | SRR6880491
 NL1_h3k27ac_h3k27ac_chipseq | SRR6880492
 Cirr1_h3k27ac_chipseq       | SRR6880493    
 HCC1_h3k27ac_chipseq        | SRR6880494    
 Cirr3_h3k27ac_chipseq       | SRR6880495    
 HCC3_h3k27ac_chipseq        | SRR6880496
-NL1_h3k4me3_h3k4me3_chipseq | SRR6880497
-Cirr1_h3k4me3_chipseq       | SRR6880498
-HCC1_h3k4me3_chipseq        | SRR6880499
-Cirr3_h3k4me3_chipseq       | SRR6880500    
-HCC3_h3k4me3_chipseq        | SRR6880501    
 NL1_input_chipseq           | SRR6880507, SRR6880508
 Cirr1_input_chipseq         | SRR6880509, SRR6880510
 HCC1_input_chipseq          | SRR6880511, SRR6880512
